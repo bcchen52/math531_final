@@ -1,0 +1,9 @@
+# R and renv
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# renv project-local libraries and staging
+renv/library/
+renv/staging/
