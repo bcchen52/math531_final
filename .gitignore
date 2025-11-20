@@ -1,9 +1,32 @@
-# R and renv
+# R session artifacts
 .Rhistory
 .RData
 .Rproj.user/
 .Ruserdata
 
-# renv project-local libraries and staging
+# Project-level config that should stay tracked (keep .Rprofile if needed)
+# If you DO want to ignore .Rprofile uncomment next line
+# .Rprofile
+
+# renv local library + staging (keep lockfile, ignore library contents)
 renv/library/
 renv/staging/
+# Keep lockfile for reproducibility
+!renv.lock
+
+# Generated analysis outputs
+plots/
+*.png
+*.html
+*.pdf
+
+# Temporary files
+*.tmp
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# If large raw data should be excluded, uncomment below
+# owid-co2-data.csv
