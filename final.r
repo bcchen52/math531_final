@@ -59,8 +59,6 @@ wanted_columns = c(
     "iso_code", 
     "co2_per_capita", 
     "gdp_per_capita",
-    "gdp",
-    "population",
     "cement_co2_per_capita",
     "coal_co2_per_capita",
     "oil_co2_per_capita",
@@ -70,7 +68,8 @@ wanted_columns = c(
     "land_use_change_co2_per_capita",
     "energy_per_capita",
     "trade_co2_per_capita",
-    "ghg_per_capita"
+    "methane_per_capita",
+    "nitrous_oxide_per_capita"
     )
 
 kaya_identity = c(
