@@ -14,12 +14,6 @@ renv/staging/
 # Keep lockfile for reproducibility
 !renv.lock
 
-# Generated analysis outputs
-plots/
-*.png
-*.html
-*.pdf
-
 # Temporary files
 *.tmp
 *.log
