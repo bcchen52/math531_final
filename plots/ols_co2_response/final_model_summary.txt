@@ -1,0 +1,40 @@
+FINAL STEPWISE-SELECTED LOG-LOG MODEL (AFTER INFLUENTIAL POINT REMOVAL)
+Response: log(co2_per_capita + 1)
+================================================================================ 
+
+Removed 52 influential points (1.45% of original data)
+
+Removal criteria:
+  - High Cook's D AND |std residual| > 3, OR
+  - Extreme outliers with |std residual| > 4
+
+Selected Predictors:
+  - log_energy
+  - log_gas
+  - log_coal
+  - log_oil
+  - log_flaring
+
+
+Call:
+lm(formula = formula_final, data = data_log_clean)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.33329 -0.07005 -0.00527  0.05934  0.40008 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -1.038187   0.026564  -39.08   <2e-16 ***
+log_energy   0.176463   0.003431   51.43   <2e-16 ***
+log_gas      0.306112   0.004285   71.43   <2e-16 ***
+log_coal     0.329936   0.003487   94.63   <2e-16 ***
+log_oil      0.461460   0.006001   76.90   <2e-16 ***
+log_flaring  0.358143   0.008486   42.20   <2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1122 on 3523 degrees of freedom
+Multiple R-squared:  0.9824,	Adjusted R-squared:  0.9824 
+F-statistic: 3.939e+04 on 5 and 3523 DF,  p-value: < 2.2e-16
+

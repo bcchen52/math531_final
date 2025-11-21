@@ -1,0 +1,28 @@
+
+Call:
+lm(formula = formula_full, data = data_complete)
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-77542  -4959  -1263   4024  66112 
+
+Coefficients:
+                                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                    -5.366e+05  2.254e+04 -23.803  < 2e-16 ***
+year                            2.700e+02  1.126e+01  23.984  < 2e-16 ***
+cement_co2_per_capita           1.560e+04  1.097e+03  14.219  < 2e-16 ***
+coal_co2_per_capita            -3.876e+02  6.971e+01  -5.560 2.89e-08 ***
+oil_co2_per_capita              1.311e+01  8.776e+01   0.149  0.88124    
+gas_co2_per_capita             -3.580e+02  9.512e+01  -3.764  0.00017 ***
+flaring_co2_per_capita         -3.801e+03  3.505e+02 -10.846  < 2e-16 ***
+land_use_change_co2_per_capita -4.885e+01  5.878e+01  -0.831  0.40606    
+energy_per_capita               3.559e-01  9.099e-03  39.116  < 2e-16 ***
+methane_per_capita              3.489e+02  8.335e+01   4.186 2.90e-05 ***
+nitrous_oxide_per_capita        1.321e+03  2.775e+02   4.762 1.99e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 9214 on 3814 degrees of freedom
+Multiple R-squared:  0.7161,	Adjusted R-squared:  0.7153 
+F-statistic: 961.9 on 10 and 3814 DF,  p-value: < 2.2e-16
+

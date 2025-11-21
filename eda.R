@@ -2,28 +2,33 @@
 # Exploratory Data Analysis for OWID CO2 Dataset
 # -----------------------------------------------------------------------------
 # This script performs comprehensive EDA on owid-co2-data.csv, focusing on
-# the 14 variables selected for modeling (per-capita emission metrics).
+# the 11 variables selected for modeling (per-capita emission metrics + year).
 #
 # Analysis Pipeline:
-#   1. Load data and apply filtering (year >= 1851, valid iso_code, non-NA co2_per_capita)
+#   1. Load data and apply filtering (year >= 1851, valid iso_code, non-NA gdp_per_capita)
 #   2. Create derived variable: gdp_per_capita
 #   3. Profile missingness for selected variables
 #   4. Generate distributions (histograms, log-scale) for all numeric predictors
-#   5. Create correlation heatmap for the 13 numeric variables
+#   5. Create correlation heatmap for the 10 numeric variables
 #   6. Explore temporal trends for key per-capita metrics
 #   7. Examine emission composition across fuel types (per-capita basis)
 #   8. Identify outliers and data quality issues
 #   9. Save all plots and summary tables to ./plots/
 #
-# Selected Variables (14 total):
+# Selected Variables (11 total):
 #   - iso_code (country identifier)
-#   - co2_per_capita (response variable)
-#   - gdp_per_capita (created from gdp/population)
+#   - year (temporal predictor)
+#   - gdp_per_capita (RESPONSE VARIABLE - created from gdp/population)
 #   - cement_co2_per_capita, coal_co2_per_capita, oil_co2_per_capita,
-#     gas_co2_per_capita, flaring_co2_per_capita, other_co2_per_capita
+#     gas_co2_per_capita, flaring_co2_per_capita
 #   - land_use_change_co2_per_capita
-#   - energy_per_capita, trade_co2_per_capita
+#   - energy_per_capita
 #   - methane_per_capita, nitrous_oxide_per_capita
+#
+# Removed variables:
+#   - co2_per_capita (now excluded, was response in previous version)
+#   - trade_co2_per_capita (82% missing)
+#   - other_co2_per_capita (92% missing)
 # -----------------------------------------------------------------------------
 
 # Load packages ---------------------------------------------------------------
@@ -40,36 +45,34 @@ if (!dir.exists(plots_dir)) dir.create(plots_dir)
 # Load raw data
 raw <- read.csv("owid-co2-data.csv", stringsAsFactors = FALSE)
 
-# Apply filtering logic from final.r:
+# Apply filtering logic:
 # 1. Year >= 1851 (where 252 countries have data)
 # 2. Valid iso_code (exclude empty strings and NA)
-# 3. Non-NA co2_per_capita (our response variable)
+# 3. Non-NA gdp and population (to create gdp_per_capita, our response variable)
 data0 <- raw %>%
   filter(year >= 1851) %>%
-  filter(iso_code != "", !is.na(iso_code))
+  filter(iso_code != "", !is.na(iso_code)) %>%
+  filter(!is.na(gdp), !is.na(population))
 
 data1 <- data0 %>%
-  drop_na(co2_per_capita) %>%
   mutate(
     iso_code = factor(iso_code),
-    gdp_per_capita = gdp / population,
-    trade_co2_per_capita = trade_co2 / population
-  )
+    gdp_per_capita = gdp / population
+  ) %>%
+  drop_na(gdp_per_capita)
 
-# Define the 14 wanted columns from final.r
+# Define the 11 wanted columns (gdp_per_capita is response, removed co2_per_capita)
 wanted_columns <- c(
   "iso_code",
-  "co2_per_capita",
+  "year",
   "gdp_per_capita",
   "cement_co2_per_capita",
   "coal_co2_per_capita",
   "oil_co2_per_capita",
   "gas_co2_per_capita",
   "flaring_co2_per_capita",
-  "other_co2_per_capita",
   "land_use_change_co2_per_capita",
   "energy_per_capita",
-  "trade_co2_per_capita",
   "methane_per_capita",
   "nitrous_oxide_per_capita"
 )
@@ -81,15 +84,11 @@ message("Data filtered and selected:")
 message("  Rows: ", nrow(data_selected))
 message("  Columns: ", ncol(data_selected))
 message("  Unique countries: ", n_distinct(data_selected$iso_code))
-
-message("Data filtered and selected:")
-message("  Rows: ", nrow(data_selected))
-message("  Columns: ", ncol(data_selected))
-message("  Unique countries: ", n_distinct(data_selected$iso_code))
+message("  Year range: ", min(data_selected$year), " to ", max(data_selected$year))
 
 # Missingness Profiling ------------------------------------------------------
-# Calculate missingness for each of the 13 numeric variables
-numeric_vars <- wanted_columns[wanted_columns != "iso_code"]
+# Calculate missingness for each of the 10 numeric variables (excluding iso_code and year)
+numeric_vars <- wanted_columns[!wanted_columns %in% c("iso_code", "year")]
 
 miss_tbl <- data_selected %>%
   select(all_of(numeric_vars)) %>%
@@ -106,7 +105,7 @@ miss_plot <- ggplot(miss_tbl, aes(x = reorder(variable, pct_missing), y = pct_mi
   scale_y_continuous(labels = percent_format()) +
   labs(
     title = "Missingness in Selected Per-Capita Variables",
-    subtitle = "After filtering for year >= 1851 and non-NA co2_per_capita",
+    subtitle = "10 numeric variables (excluding year) - After filtering for year >= 1851 and non-NA gdp_per_capita",
     x = "Variable",
     y = "% Missing"
   ) +
@@ -190,7 +189,7 @@ heat_plot <- ggplot(cor_long, aes(var1, var2, fill = corr)) +
   ) +
   labs(
     title = "Correlation Heatmap: Selected Per-Capita Variables",
-    subtitle = "13 numeric predictors for CO2 per capita modeling",
+    subtitle = "10 numeric variables for GDP per capita modeling (year analyzed separately)",
     x = NULL, y = NULL
   ) +
   theme_minimal(base_size = 11) +
@@ -215,11 +214,11 @@ message("Correlation heatmap created with ", nrow(cor_mat), " variables")
 
 # Temporal Trends ------------------------------------------------------------
 # Track how key per-capita metrics evolve over time (global average)
-# Add year back to data for temporal analysis
-data_with_year <- data1 %>% select(year, all_of(wanted_columns))
+# Year is already included in data_selected
+data_with_year <- data_selected
 
 # Calculate global averages per year for selected metrics
-key_percap_metrics <- c("co2_per_capita", "gdp_per_capita", "energy_per_capita",
+key_percap_metrics <- c("gdp_per_capita", "energy_per_capita", "coal_co2_per_capita",
                         "methane_per_capita", "nitrous_oxide_per_capita")
 
 temporal_trends <- data_with_year %>%
@@ -254,7 +253,7 @@ ggsave(file.path(plots_dir, "selected_vars_temporal_trends.png"), trend_plot,
 # Examine the relative contribution of different fuel types to per-capita emissions
 fuel_types_percap <- c("cement_co2_per_capita", "coal_co2_per_capita",
                        "oil_co2_per_capita", "gas_co2_per_capita",
-                       "flaring_co2_per_capita", "other_co2_per_capita")
+                       "flaring_co2_per_capita")
 
 # Get latest year data
 latest_year <- max(data_with_year$year, na.rm = TRUE)
@@ -293,75 +292,75 @@ write.csv(composition_latest, file.path(plots_dir, "selected_vars_fuel_compositi
 write.csv(composition_latest, file.path(plots_dir, "selected_vars_fuel_composition_table.csv"),
           row.names = FALSE)
 
-# Top and Bottom Countries by CO2 Per Capita --------------------------------
-# Identify extreme per-capita emitters in the latest year
+# Top and Bottom Countries by GDP Per Capita --------------------------------
+# Identify highest GDP per capita countries in the latest year
 latest_data <- data_with_year %>% filter(year == latest_year)
 
-# Top 15 per-capita emitters
+# Top 15 by GDP per capita
 top_percap <- latest_data %>%
-  select(iso_code, co2_per_capita) %>%
-  filter(!is.na(co2_per_capita)) %>%
-  arrange(desc(co2_per_capita)) %>%
+  select(iso_code, gdp_per_capita) %>%
+  filter(!is.na(gdp_per_capita)) %>%
+  arrange(desc(gdp_per_capita)) %>%
   slice_head(n = 15)
 
-bar_top_percap <- ggplot(top_percap, aes(x = reorder(iso_code, co2_per_capita),
-                                          y = co2_per_capita)) +
+bar_top_percap <- ggplot(top_percap, aes(x = reorder(iso_code, gdp_per_capita),
+                                          y = gdp_per_capita)) +
   geom_col(fill = "#6A3D9A") +
   coord_flip() +
   scale_y_continuous(labels = comma) +
   labs(
-    title = paste("Top 15 Per-Capita CO2 Emitters in", latest_year),
+    title = paste("Top 15 Countries by GDP Per Capita in", latest_year),
     x = NULL,
-    y = "CO2 Per Capita"
+    y = "GDP Per Capita"
   ) +
   theme_minimal(base_size = 12)
 
-ggsave(file.path(plots_dir, "selected_vars_top_percap_emitters.png"), bar_top_percap,
+ggsave(file.path(plots_dir, "selected_vars_top_percap_gdp.png"), bar_top_percap,
        width = 8, height = 6, dpi = 150)
 
-# Save top emitters table
+# Save top GDP table
 write.csv(top_percap, file.path(plots_dir, "selected_vars_top_percap_table.csv"),
           row.names = FALSE)
 
 # Pairwise Scatterplots: Key Relationships -----------------------------------
-# Examine relationships between response and key predictors
+# Examine relationships between response (GDP) and key predictors
 latest_complete <- latest_data %>%
-  select(co2_per_capita, gdp_per_capita, energy_per_capita,
+  select(gdp_per_capita, energy_per_capita,
          coal_co2_per_capita, oil_co2_per_capita) %>%
   drop_na()
 
-# GDP vs CO2 per capita
-scatter_gdp <- ggplot(latest_complete, aes(gdp_per_capita, co2_per_capita)) +
+# Energy vs GDP per capita
+scatter_energy <- ggplot(latest_complete, aes(energy_per_capita, gdp_per_capita)) +
   geom_point(alpha = 0.5, color = "#2C3E50") +
   geom_smooth(method = "lm", color = "#E74C3C", se = TRUE, alpha = 0.2) +
   scale_x_log10(labels = comma) +
   scale_y_log10(labels = comma) +
   labs(
-    title = "GDP Per Capita vs CO2 Per Capita",
+    title = "Energy Per Capita vs GDP Per Capita",
     subtitle = paste("Latest year:", latest_year),
-    x = "GDP Per Capita (log10)",
-    y = "CO2 Per Capita (log10)"
+    x = "Energy Per Capita (log10)",
+    y = "GDP Per Capita (log10)"
   ) +
   theme_minimal(base_size = 11)
 
-ggsave(file.path(plots_dir, "selected_vars_gdp_vs_co2.png"), scatter_gdp,
+ggsave(file.path(plots_dir, "selected_vars_energy_vs_gdp.png"), scatter_energy,
        width = 8, height = 6, dpi = 150)
 
-# Energy vs CO2 per capita
-scatter_energy <- ggplot(latest_complete, aes(energy_per_capita, co2_per_capita)) +
+# Coal CO2 vs GDP per capita
+scatter_coal <- ggplot(latest_complete, aes(coal_co2_per_capita, gdp_per_capita)) +
   geom_point(alpha = 0.5, color = "#2C3E50") +
   geom_smooth(method = "lm", color = "#3498DB", se = TRUE, alpha = 0.2) +
   scale_x_log10(labels = comma) +
   scale_y_log10(labels = comma) +
   labs(
-    title = "Energy Per Capita vs CO2 Per Capita",
+    title = "Coal CO2 Per Capita vs GDP Per Capita",
     subtitle = paste("Latest year:", latest_year),
-    x = "Energy Per Capita (log10)",
-    y = "CO2 Per Capita (log10)"
+    x = "Coal CO2 Per Capita (log10)",
+    y = "GDP Per Capita (log10)"
   ) +
   theme_minimal(base_size = 11)
 
-ggsave(file.path(plots_dir, "selected_vars_energy_vs_co2.png"), scatter_energy,
+ggsave(file.path(plots_dir, "selected_vars_coal_vs_gdp.png"), scatter_coal,
        width = 8, height = 6, dpi = 150)
 
 # Data Quality Summary -------------------------------------------------------
@@ -394,16 +393,21 @@ message("\n", strrep("=", 80))
 message("EDA COMPLETE - SELECTED PER-CAPITA VARIABLES")
 message(strrep("=", 80))
 message("\nKEY FINDINGS:")
-message("  - Dataset filtered: year >= 1851, non-NA co2_per_capita")
-message("  - Variables analyzed: 14 (1 identifier + 13 numeric predictors)")
+message("  - Dataset filtered: year >= 1851, non-NA gdp_per_capita")
+message("  - Response variable: gdp_per_capita")
+message("  - Variables analyzed: 11 total (iso_code + year + 9 numeric predictors)")
+message("  - Removed: co2_per_capita, trade_co2_per_capita, other_co2_per_capita")
+message("  - Added: year (temporal predictor)")
 message("  - Unique countries: ", n_distinct(data_selected$iso_code))
 message("  - Total observations: ", nrow(data_selected))
+message("  - Year range: ", min(data_selected$year), " to ", max(data_selected$year))
 message("\nMODELING NOTES:")
+message("  - GDP per capita is response; emission metrics are predictors")
 message("  - All per-capita metrics are right-skewed (log transform recommended)")
+message("  - Year can capture temporal trends in economic development")
 message("  - Strong correlations among fuel types (multicollinearity risk)")
 message("  - Some variables have substantial missingness (handle carefully)")
-message("  - Outliers present (especially in small oil-rich countries)")
-message("  - GDP and energy show strong positive relationships with CO2")
+message("  - Energy and emissions show relationships with GDP development")
 message("\nOUTPUTS SAVED to ./", plots_dir, "/")
 message("  Plots: 9 files")
 message("  Tables: 5 CSV files")
