@@ -1,16 +1,17 @@
 #options(repos = c(CRAN = "https://cloud.r-project.org"))
-#install.packages(c("tidyverse", "caret", "car", "dplyr"))
+#install.packages(c("tidyverse", "caret", "car", "dplyr", "ggplot2"))
 
 library(tidyverse)
 library(caret)
 library(car)
 library(dplyr)
+library(ggplot2)
 
 raw_data = read.csv("owid-co2-data.csv")
 
-str(raw_data)
+#str(raw_data)
 #summary(raw_data)
-tail(raw_data)
+#tail(raw_data)
 
 #many of the early years have no values, remove them
 year_na_summary <- raw_data %>%
@@ -34,7 +35,6 @@ data0 = raw_data %>% filter(year >= 1851) %>% filter(iso_code != "", !is.na(iso_
 
 unique_countries = unique(data0$country)
 
-
 data1 = data0 %>% drop_na(co2_per_capita)
 
 #this is the cleaned data
@@ -56,18 +56,16 @@ data1 = data1 %>% mutate(iso_code = factor(iso_code), gdp_per_capita = gdp/popul
 #ghg_per_capita
 
 wanted_columns = c(
-    "iso_code", 
-    "co2_per_capita", 
+    "iso_code",
+    "year",
     "gdp_per_capita",
     "cement_co2_per_capita",
     "coal_co2_per_capita",
     "oil_co2_per_capita",
     "gas_co2_per_capita",
     "flaring_co2_per_capita",
-    "other_co2_per_capita",
     "land_use_change_co2_per_capita",
     "energy_per_capita",
-    "trade_co2_per_capita",
     "methane_per_capita",
     "nitrous_oxide_per_capita"
     )
@@ -82,13 +80,42 @@ kaya_identity = c(
 
 data2 = data1 %>% select(all_of(wanted_columns))
 
+#=====Top 20 CO2 Emissions=====
+top_co2_2024 <- data2 %>% 
+  filter(
+    year == 2024,
+    !is.na(co2_per_capita),
+    !is.na(iso_code),
+    iso_code != ""
+  ) %>% 
+  arrange(desc(co2_per_capita)) %>% 
+  slice_head(n = 10)
+
+# Bar plot: top CO2 per capita in 2024 by iso_code
+ggplot(top_co2_2024, aes(x = reorder(iso_code, co2_per_capita),
+                         y = co2_per_capita,
+                         fill = co2_per_capita)) +
+  geom_col() +
+  coord_flip() +  # horizontal bars for readability
+  scale_fill_viridis_c(option = "plasma") +
+  labs(
+    title = "Top 10 CO₂ Emissions per Capita in 2024",
+    subtitle = "By ISO country code",
+    x = "ISO code",
+    y = "CO₂ per capita (tonnes per person)",
+    fill = "t/person"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10)
+  )
+
 data2_numeric = data2 %>% select(where(is.numeric)) %>% drop_na()
 
-str(data2_numeric)
-
-head(data2_numeric)
-
-tail(data2_numeric)
+#str(data2_numeric)
+#head(data2_numeric)
+#tail(data2_numeric)
 
 cor_mat <- cor(data2_numeric)
 cor_mat
@@ -97,7 +124,7 @@ cor_mat
 
 data_c = unique(data2$country)
 
-data_c
+#data_c
 
 model0 = lm(co2_per_capita ~ ., data=data2)
 
