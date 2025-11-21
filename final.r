@@ -35,7 +35,7 @@ data0 = raw_data %>% filter(year >= 1851) %>% filter(iso_code != "", !is.na(iso_
 
 unique_countries = unique(data0$country)
 
-data1 = data0 %>% drop_na(co2_per_capita)
+data1 = data0 %>% drop_na(coal_co2_per_capita)
 
 #this is the cleaned data
 data1 = data1 %>% mutate(iso_code = factor(iso_code), gdp_per_capita = gdp/population, trade_co2_per_capita = trade_co2/population)
@@ -57,6 +57,8 @@ data1 = data1 %>% mutate(iso_code = factor(iso_code), gdp_per_capita = gdp/popul
 
 wanted_columns = c(
     "iso_code",
+    "co2_including_luc_per_capita",
+    "co2_per_capita",
     "year",
     "gdp_per_capita",
     "cement_co2_per_capita",
@@ -68,7 +70,16 @@ wanted_columns = c(
     "energy_per_capita",
     "methane_per_capita",
     "nitrous_oxide_per_capita"
-    )
+)
+
+cause_cols <- c(
+  "cement_co2_per_capita",
+  "coal_co2_per_capita",
+  "oil_co2_per_capita",
+  "gas_co2_per_capita",
+  "flaring_co2_per_capita",
+  "land_use_change_co2_per_capita"
+)
 
 kaya_identity = c(
     "co2",
@@ -109,6 +120,51 @@ ggplot(top_co2_2024, aes(x = reorder(iso_code, co2_per_capita),
   theme(
     plot.title = element_text(face = "bold"),
     axis.text.y = element_text(size = 10)
+  )
+
+#=====Total Ratios=====
+# 2. Sum over ALL years and ALL countries
+totals <- data2 %>%
+  filter(!is.na(co2_including_luc_per_capita)) %>%
+  summarise(
+    total_co2_inc_luc_pc = sum(co2_including_luc_per_capita, na.rm = TRUE),
+    across(all_of(cause_cols), ~ sum(.x, na.rm = TRUE))
+  )
+
+# 3. Compute ratios: total_X / total_CO2_including_LUC
+ratios <- totals %>%
+  pivot_longer(
+    cols = all_of(cause_cols),
+    names_to = "cause",
+    values_to = "total_cause"
+  ) %>%
+  mutate(
+    ratio     = total_cause / total_co2_inc_luc_pc,
+    ratio_pct = 100 * ratio,
+    cause = case_when(
+      cause == "cement_co2_per_capita"          ~ "Cement",
+      cause == "coal_co2_per_capita"            ~ "Coal",
+      cause == "oil_co2_per_capita"             ~ "Oil",
+      cause == "gas_co2_per_capita"             ~ "Gas",
+      cause == "flaring_co2_per_capita"         ~ "Flaring",
+      cause == "land_use_change_co2_per_capita" ~ "Land-use change",
+      TRUE                                      ~ cause
+    )
+  )
+
+# 4. Bar plot of overall ratios
+ggplot(ratios, aes(x = cause, y = ratio_pct)) +
+  geom_col() +
+  labs(
+    title = "Aggregated contributions relative to CO2 including land-use change",
+    subtitle = "Totals summed over all years and countries",
+    x = "Source",
+    y = "Total X / total CO2 (including LUC) (%)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
 data2_numeric = data2 %>% select(where(is.numeric)) %>% drop_na()
